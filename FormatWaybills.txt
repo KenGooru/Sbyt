@@ -1,0 +1,355 @@
+
+Public PathNacl As Variant, FileNacl As Variant
+Public Sub OpenNacl_Format()
+    Dim xFile  As Variant
+    'по умолчанию к выбору доступны файлы Excel(xls,xlsx,xlsm,xlsb)
+    PathNacl = Application.GetOpenFilename _
+               ("Excel files(*.xls*),*.xls*", 1, "Укажите файл(ы) с накладными", , True)
+    If VarType(PathNacl) = vbBoolean Then
+        'была нажата кнопка отмены - выход из процедуры
+        Exit Sub
+    End If
+
+    'Отключаем обновление экрана
+    Application.ScreenUpdating = False
+    'Отключаем автопересчет формул
+    Application.Calculation = xlCalculationManual
+    'Отключаем отслеживание событий
+    Application.EnableEvents = False
+    'Отключаем разбиение на печатные страницы
+    ActiveWorkbook.ActiveSheet.DisplayPageBreaks = False
+
+    For Each FileNacl In PathNacl
+        If IsBookOpen(FileNacl) Then        'проверяем открыта ли книга
+            Workbooks(FileNacl).Activate        'если да то ативируем её
+        Else
+            Workbooks.Open FileNacl        'если нет то открываем
+        End If
+
+Call Del_and_Sort_Columns
+    Next
+
+    'Возвращаем обновление экрана
+    Application.ScreenUpdating = True
+    'Возвращаем автопересчет формул
+    Application.Calculation = xlCalculationAutomatic
+    'Включаем отслеживание событий
+    Application.EnableEvents = True
+    
+    MsgBox "Выбранные файлы накладных отформатированы.", vbInformation, "Форматирование завершено"
+
+End Sub
+Private Function IsBookOpen(FileNacl As Variant) As Boolean        'функция проверки "открыта ли книга"
+    Dim wbBook As Workbook
+    For Each wbBook In Workbooks
+        If wbBook.Name <> ThisWorkbook.Name Then
+            If Windows(wbBook.Name).Visible Then
+                If wbBook.Name = wbName Then IsBookOpen = True: Exit For
+            End If
+        End If
+    Next wbBook
+End Function
+
+Private Sub Del_and_Sort_Columns()
+
+    Dim cel    As Range
+    Dim lRow As Integer, l_Row As Integer
+
+    Range("A1:I7").Select
+    Selection.ClearContents
+    Selection.Merge True
+    Selection.RowHeight = 12
+    Range("N7:S7").Select
+    Selection.Copy
+    Range("A7:I7").Select
+    ActiveSheet.Paste
+    Range("N6:T6").Select
+    Application.CutCopyMode = False
+    Selection.Copy
+    Range("A6:I6").Select
+    ActiveSheet.Paste
+    Range("L4:T4").Select
+    Application.CutCopyMode = False
+    Selection.Copy
+    Range("A5:I5").Select
+    ActiveSheet.Paste
+    Range("L3:T3").Select
+    Application.CutCopyMode = False
+    Selection.Copy
+    Range("A4:I4").Select
+    ActiveSheet.Paste
+    Range("T2").Select
+    Application.CutCopyMode = False
+    Selection.Copy
+    Range("A3:I3").Select
+    ActiveSheet.Paste
+    Range("T1").Select
+    Application.CutCopyMode = False
+    Selection.Copy
+    Range("A2:I2").Select
+    ActiveSheet.Paste
+    Range("A1:I7").Select
+    Application.CutCopyMode = False
+    With Selection.Font
+        .Name = "Arial"
+        .Size = 8
+        .Strikethrough = False
+        .Superscript = False
+        .Subscript = False
+        .OutlineFont = False
+        .Shadow = False
+        .Underline = xlUnderlineStyleNone
+        .ColorIndex = xlAutomatic
+        .TintAndShade = 0
+        .ThemeFont = xlThemeFontNone
+    End With
+    With Selection
+        .HorizontalAlignment = xlLeft
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+    End With
+    Range("A4:I4").Select
+    With Selection.Font
+        .Name = "Arial"
+        .Size = 6
+        .Strikethrough = False
+        .Superscript = False
+        .Subscript = False
+        .OutlineFont = False
+        .Shadow = False
+        .Underline = xlUnderlineStyleNone
+        .ColorIndex = xlAutomatic
+        .TintAndShade = 0
+        .ThemeFont = xlThemeFontNone
+    End With
+
+
+    Range("I:T,F:G,C:D").Delete
+
+
+    Range("D9").Select
+
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.TextToColumns Destination:=Range("D9"), DataType:=xlDelimited, _
+                            TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+                            Semicolon:=False, Comma:=False, Space:=False, Other:=True, OtherChar _
+                                                                                     :="/", FieldInfo:=Array(Array(1, 1), Array(2, 4)), TrailingMinusNumbers:=True
+    Selection.Cut
+    Range("F9:F24").Select
+    Selection.Insert Shift:=xlToRight
+    Range("D8").Select
+    ActiveCell.FormulaR1C1 = "Дата"
+    Range("E8").Select
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    Selection.Borders(xlInsideVertical).LineStyle = xlNone
+    Selection.Borders(xlInsideHorizontal).LineStyle = xlNone
+    ActiveCell.FormulaR1C1 = "Номер"
+    Range("E8").Select
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlCenter
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+    With Selection
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .WrapText = False
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+    Range("C8").Select
+    ActiveCell.FormulaR1C1 = "шт."
+    Range("C8").Select
+    With Selection
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .WrapText = False
+        .Orientation = 90
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+
+    Range("A8").Select
+    ActiveCell.FormulaR1C1 = "№"
+    Range("A8").Select
+    With Selection
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .WrapText = False
+        .Orientation = 90
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+
+    Range("A8").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    Range(Selection, Selection.End(xlDown)).Select
+    With Selection.Font
+        .Name = "Times New Roman"
+        .Strikethrough = False
+        .Superscript = False
+        .Subscript = False
+        .OutlineFont = False
+        .Shadow = False
+        .Underline = xlUnderlineStyleNone
+        .ColorIndex = xlAutomatic
+        .TintAndShade = 0
+        .ThemeFont = xlThemeFontNone
+    End With
+    With Selection.Font
+        .Name = "Times New Roman"
+        .Size = 9
+        .Strikethrough = False
+        .Superscript = False
+        .Subscript = False
+        .OutlineFont = False
+        .Shadow = False
+        .Underline = xlUnderlineStyleNone
+        .ColorIndex = xlAutomatic
+        .TintAndShade = 0
+        .ThemeFont = xlThemeFontNone
+    End With
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlInsideVertical)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlInsideHorizontal)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+
+    Range("A1:E7").Select
+    Selection.Merge True
+
+    Range("A9").Columns.AutoFit
+    Range("B8").Columns.AutoFit
+    Range("C9:D9").Columns.AutoFit
+    Range("E8").Columns.AutoFit
+    Range("A8:D8").EntireRow.AutoFit
+
+    Range("D9").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.NumberFormat = "m/d/yyyy"
+    colvx = Cells(Rows.Count, 1).End(xlUp).Offset(-4, 0).Row
+    Range(Cells(9, 6), Cells(colvx, 6)).Select
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlBottom
+        .WrapText = True
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+        .ColumnWidth = 139
+    End With
+
+    lRow = ActiveSheet.Cells(Rows.Count, 3).End(xlUp).Row
+    For Each cel In Range("C9:C" & lRow - 1)
+        If cel.Value > "1" Then cel.Interior.Color = vbGreen
+    Next cel
+
+    Range("B9").Select
+    l_Row = Cells(Rows.Count, 1).End(xlUp).Row
+    Range(Cells(l_Row, 1), Cells(l_Row, 1).Offset(-2)).Value = Empty
+
+    If Val(Application.Version) < 12 Then Exit Sub
+
+    ' получаем полный путь к текущему файлу Excel
+    oldName$ = FileNacl
+
+    ' выход, если файл уже в нужном формате (XLSX)
+    If UCase$(oldName$) Like "*.XLSX" Then Exit Sub
+
+    ' формируем новое имя файла (меняем расширение)
+    newName$ = Left(oldName$, InStrRev(oldName$, ".")) & "xlsx"
+
+    ' сохраняем файл под новым именем в формате XLSX
+    ActiveWorkbook.SaveAs newName$, xlOpenXMLWorkbook
+
+    ' удаляем прежний файл (в старом формате)
+    If Err = 0 Then
+        Kill oldName$        'удаляем старый файл с расширением xls
+    End If
+
+    ActiveWorkbook.Close
+
+End Sub
+
+

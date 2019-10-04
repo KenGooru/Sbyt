@@ -1,0 +1,312 @@
+
+Public NameNacl As String
+Public Name As String
+Public col_vo As String
+Public Data As Date
+Public numb As String
+Public Find_ProductionValid As Boolean
+Public NamePlan As String
+
+Public Sub OpenNacl()
+    Dim FullPathNacl, xFile As Variant
+    Dim k As Integer
+    
+    
+    'по умолчанию к выбору доступны файлы Excel(xls,xlsx,xlsm,xlsb)
+    FullPathNacl = Application.GetOpenFilename _
+                   ("Excel files(*.xls*),*.xls*", 1, "Укажите файл(ы) с накладными", , True)
+    If VarType(FullPathNacl) = vbBoolean Then
+        'была нажата кнопка отмены - выход из процедуры
+        Exit Sub
+    End If
+    
+    With Application
+        .EnableEvents = False
+        '   .Calculation = xlCalculationManual
+        '   .ScreenUpdating = False
+        '   .Visible = False
+        
+        For Each xFile In FullPathNacl
+            k = InStrRev(xFile, "\")    'позиция последнего \
+            NameNacl = Mid(xFile, k + 1) 'оставлем только то что после последнего \
+            Workbooks.Open xFile 'открываем выбрынный бук
+            Call Find_Select
+        Next
+        .EnableEvents = True
+        '   .Calculation = xlCalculationAutomatic
+        '   .ScreenUpdating = True
+        '   .Visible = True
+    End With
+    MsgBox "Выбранные файлы накладных успешно обработаны", 64, "Обработка завершена"
+End Sub
+
+Private Sub Open_Production(ByVal MesProp As String, ByVal NumCeh As String, ByVal Cell As Range)
+    Const baseFolder = "H:\1\ПробаМесяц\"
+    Dim pShell As New Shell32.Shell
+    Dim FullPathPlan As String
+    Dim i As Integer
+    FullPathPlan = FindFile(baseFolder, "Производство" & NumCeh & MesProp & ".xlsx", pShell)
+    If FullPathPlan <> "" Then
+        
+        i = InStrRev(FullPathPlan, "\")        'позиция последнего \
+        NamePlan = Mid(FullPathPlan, i + 1) 'оставлем только то что после последнего \
+        If IsBookOpen(NamePlan) Then
+            Workbooks(NamePlan).Activate
+            Find_ProductionValid = True
+        Else
+            Workbooks.Open FullPathPlan
+            Find_ProductionValid = True
+        End If
+    Else
+        With Workbooks(NameNacl).Worksheets("Sheet1")
+            .Range(Cell, Cell.Offset(0, 2)).Interior.Color = vbRed
+            Cell.Offset(0, 4).Value = "Для изделия" & Chr(32) & Name & Chr(32) & _
+           "файл с Планом производства не найден"
+        End With
+        Find_ProductionValid = False
+    End If
+End Sub
+
+Private Sub Find_Select()    'управляющая процедура разноса сдачи изделий
+    Const baseFolder = "H:\1\ПробаМесяц\"
+    Dim pShell As New Shell32.Shell
+    Dim rRange As Range
+    Dim Cell As Range
+    Dim oldValue As String, newValue As Variant, CellFind As Variant
+    Dim i As Integer
+    Dim n As Integer
+    Dim MesProp As String, NumCeh As String
+    Dim DataNacl As Date
+    
+    Set rRange = Workbooks(NameNacl).Worksheets("Sheet1"). _
+    Range(Range("B9"), Range("B9").End(xlDown).Offset(-1, 0))
+    
+    With Workbooks(NameNacl).Worksheets("Sheet1")
+        NumCeh = Mid(Cells(6, 1).Value, 13, 2)
+        DataNacl = Mid(Cells(5, 1).Value, 18, 10)
+    End With
+    
+    For Each Cell In rRange
+        
+        If Cell.Interior.Color = 65535 Or Cell.Interior.Color = vbRed Then GoTo q: 'если ячейка с название уже цветная - гоу в конец цикла
+        'собираем нужные данные об изделии
+        Name = Cell.Value              'название изделия
+        col_vo = Cell.Offset(0, 1)  'количество сданных изделий
+        Data = Cell.Offset(0, 2)    'дата формовки изделия
+        numb = Cell.Offset(0, 3)    'номер изделия
+        MesProp = Format(Data, "mmmm")
+        
+        Call Open_Production(MesProp, NumCeh, Cell)
+        'd = Find_ProductionValid
+        If Find_ProductionValid = False Then GoTo q:
+        CellFind = DataName_Find(Name, Data, NamePlan, NameNacl, Cell) 'находим адрес ячейки для разноса
+        If CellFind = False Then GoTo q: ' если адрес не найден идти в конец цикла
+        Valid = Valid_CellFind(CellFind, Cell) 'Проверка найденной ячейки (должна быть не пустой и не жёлтой)
+        If Valid = False Then GoTo q: 'если пустая или жёлтая идти в конец цикла
+        With Workbooks(NamePlan).Worksheets("Sheet1")
+            oldValue = .Range(CellFind).Value
+            newValue = Dobav_lenie(col_vo, oldValue) 'получаем новое значение ячейки
+            'проверяем получ. значение в ячейке (формовка должна быть >= сдаче)
+            If newValue = False Then 'если проверка не пройдена оставить запись в накладной
+                With Workbooks(NameNacl).Worksheets("Sheet1")
+                    .Range(Cell, Cell.Offset(0, 2)).Interior.Color = vbRed
+                    Cell.Offset(0, 4).Value = "Сдача  изделий" & Chr(32) & Name & Chr(32) & "за" & Chr(32) & Data & Chr(32) & "превышает формовку"
+                    GoTo q: 'и идти в конец цикла
+                End With
+            End If
+            .Range(CellFind).Value = newValue    'заносим новое значение в ячейку
+        End With
+        Call Calor(newValue, CellFind)   'закрашиваем ячейку жёлтым цветом если форм=сдаче
+        Call Prim(CellFind, DataNacl)           'добавляем в ячейку примечание(данные разнесённого изделия)
+        With Workbooks(NameNacl).Worksheets("Sheet1")    'переходим в книгу с накладной
+            Cell.Interior.Color = 65535    'закрашиваем жёлтым разнесённое изделие
+        End With
+q:
+    Next
+End Sub
+
+
+Private Function FindFile(ByVal basePath As String, ByVal FileName As String, ByVal pShell As Shell32.Shell) As String
+    Dim pFItems As Shell32.FolderItems3, pFolder As Shell32.Folder3
+    Dim sResult As String, pItem As Shell32.FolderItem
+    
+    Set pFolder = pShell.Namespace(basePath)
+    Set pFItems = pFolder.Items
+    pFItems.Filter 64, FileName
+    If pFItems.Count = 1 Then
+        FindFile = pFItems.Item(0).Path
+    Else
+        Set pFItems = pFolder.Items
+        pFItems.Filter 32, "*.*"
+        If pFItems.Count > 0 Then
+            For Each pItem In pFItems
+                sResult = FindFile(pItem.Path, FileName, pShell)
+                If sResult <> "" Then FindFile = sResult: Exit Function
+            Next pItem
+        End If
+    End If
+End Function
+
+Private Function IsBookOpen(wbName As String) As Boolean
+    Dim wbBook As Workbook
+    For Each wbBook In Workbooks
+        If wbBook.Name <> ThisWorkbook.Name Then
+            If Windows(wbBook.Name).Visible Then
+                If wbBook.Name = wbName Then IsBookOpen = True: Exit For
+            End If
+        End If
+    Next wbBook
+End Function
+
+Private Function Valid_CellFind(ByVal CellFind As Variant, ByVal Cell As Range) As Boolean 'Проверка найденной ячейки (должна быть не пустой и не жёлтой)
+    Dim CellFindValue As String
+    
+    CellFindValue = Workbooks(NamePlan).Worksheets("Sheet1").Range(CellFind)
+    Select Case CellFindValue
+        Case Is = ""
+            With Workbooks(NameNacl).Worksheets("Sheet1")
+                .Range(Cell, Cell.Offset(0, 2)).Interior.Color = vbRed
+                Cell.Offset(0, 4).Value = "Изделие" & Chr(32) & Name & Chr(32) & _
+                "не проходит по формовке" & Chr(32) & Data
+            End With
+            Valid_CellFind = False
+            
+        Case Is = 65535:
+            With Workbooks(NameNacl).Worksheets("Sheet1")
+                .Range(Cell, Cell.Offset(0, 2)).Interior.Color = vbRed
+                Cell.Offset(0, 4).Value = "За" & Chr(32) & Data & Chr(32) & _
+                "все изделия" & Chr(32) & Name & Chr(32) & "сданы"
+            End With
+            Valid_CellFind = False
+            
+        Case Else: Valid_CellFind = True
+    End Select
+End Function
+
+Private Function DataName_Find(ByVal Name As String, ByVal Data As Date, ByVal NamePlan As Variant, _
+ByVal NameNacl As String, ByVal Cell As Range)        ' Функция поиска ячейки для разноса по
+    'названию изделия и дате формовки
+    Dim xRow As Range
+    Dim yColumn As Range
+    Dim xR As Integer, yC As Integer
+    
+    With Workbooks(NamePlan).Worksheets("Sheet1").Cells
+        
+        Set xRow = .Find(What:=Name, LookIn:=xlFormulas, Lookat:=xlWhole, SearchOrder:=xlByRows)
+        If xRow Is Nothing Then
+            With Workbooks(NameNacl).Worksheets("Sheet1")
+                .Range(Cell, Cell.Offset(0, 2)).Interior.Color = vbRed
+                If Cell.Offset(0, 4).Value = "" Then
+                    Cell.Offset(0, 4).Value = "Название изделия" & Chr(32) & Name & Chr(32) & _
+               "отсутствует в данном списке. Проверить др. месяц или правильность названия изделия"
+                Else
+                    Cell.Offset(0, 4).Value = Cell.Offset(0, 4).Value & Chr(32) & "Название изделия" & Chr(32) & Name & Chr(32) & _
+                "отсутствует в данном списке. Проверить др. месяц или правильность названия изделия"
+                End If
+            End With
+        Else
+            xR = xRow.Row
+        End If
+    End With
+    
+    With Workbooks(NamePlan).Worksheets("Sheet1").Cells
+        Set yColumn = .Find(What:=Data, LookIn:=xlFormulas, Lookat:=xlWhole, SearchOrder:=xlByColumns)
+        If yColumn Is Nothing Then
+            With Workbooks(NameNacl).Worksheets("Sheet1")
+                .Range(Cell, Cell.Offset(0, 2)).Interior.Color = vbRed
+                If Cell.Offset(0, 4).Value = "" Then
+                    Cell.Offset(0, 4).Value = "Дата формовки" & Chr(32) & Data & Chr(32) & _
+                    "не соответствует месяцу Плана производства, либо введена не корректно"
+                Else
+                    Cell.Offset(0, 4).Value = Cell.Offset(0, 4).Value & Chr(32) & "Дата формовки" & Chr(32) & Data & Chr(32) & _
+                    "не соответствует месяцу Плана производства, либо введена не корректно"
+                End If
+            End With
+        Else
+            yC = yColumn.Column
+        End If
+    End With
+    If xRow Is Nothing Or yColumn Is Nothing Then
+        DataName_Find = False
+    Else
+        DataName_Find = Cells(xR, yC).Address
+    End If
+End Function
+
+Private Function Dobav_lenie(ByVal col_vo As String, ByVal oldValue As String)   'функция рассчёта значения ячейки после разноса позиции из накладной
+    Dim poz1 As Integer, poz2 As Integer, pozCh1 As Integer, _
+    pozCh2 As Integer, col_voCh As Integer
+    Dim poz3 As String, poz4 As String
+    col_voCh = CInt(col_vo)    'кол-во сдаваемых изделий конверт. в число
+    
+    If oldValue Like "*(*)" Then   'есть ли в значении ячейки скобки
+        
+        poz1 = InStr(1, oldValue, "(")    'Определяем позицию первой скобки
+        poz2 = InStr(poz1 + 1, oldValue, ")")    'Определяем позицию второй скобки
+        poz3 = Left(oldValue, poz1 - 1)    'Извлекаем в poz3 всё что до скобки
+        poz4 = Mid(oldValue, poz1 + 1, poz2 - poz1 - 1)  'Извлекаем в poz4 всё что в скобках
+        pozCh1 = CInt(poz3)    'всё что до скобки конверт. в число
+        pozCh2 = CInt(poz4)    'всё что в скобках конверт. в число
+        
+        If pozCh1 < pozCh2 + col_voCh Then
+            Dobav_lenie = False
+        Else
+            Dobav_lenie = pozCh1 & "(" & pozCh2 + col_voCh & ")"
+        End If
+    Else
+        oldValueCh = CInt(oldValue)
+        If oldValueCh < col_voCh Then
+            Dobav_lenie = False
+        Else
+            Dobav_lenie = oldValue & "(" & col_vo & ")"
+        End If
+    End If
+    
+End Function
+
+Private Sub Calor(ByVal newValue As String, ByVal CellFind As String) 'процедура выделения цветом ячейки по условию сдача = формовка
+    Dim n1 As Integer, n2 As Integer
+    Dim n3 As String, n4 As String
+    n1 = InStr(1, newValue, "(")  'Определяем позицию первой скобки
+    n2 = InStr(n1 + 1, newValue, ")")  'Определяем позицию второй скобки
+    n3 = Left(newValue, n1 - 1)  'Извлекаем в n3 всё что до скобки
+    n4 = Mid(newValue, n1 + 1, n2 - n1 - 1)   'Извлекаем в n4 всё что в скобках
+    If n3 = n4 Then ' если всё что до скобки = всё что в скобках
+        With Workbooks(NamePlan).Worksheets("Sheet1")
+            .Range(CellFind).Interior.Color = 65535  'выделяем цветом ячейку при соответствии условию
+        End With
+    End If
+    
+End Sub
+
+Private Sub Prim(ByVal CellFind As String, ByVal DataNacl As Date)        'процедура добавления примечания о  сданном изделии
+    Dim cmt    As Variant
+    Dim MyCommentText As String
+    With Workbooks(NamePlan).Worksheets("Sheet1")
+        MyCommentText = NameNacl & Chr(32) & "от" & Chr(32) & DataNacl & Chr(32) & Name & Chr(32) & col_vo & "шт." _
+                      & Chr(32) & Data & Chr(32) & "№" & numb
+        Set cmt = .Range(CellFind).Comment
+        If cmt Is Nothing Then
+            Set cmt = .Range(CellFind).AddComment
+            cmt.Text Text:=MyCommentText
+        Else
+            With .Range(CellFind).Comment
+                .Text Text:=.Text & Chr(10) & MyCommentText
+            End With
+        End If
+        If Month(Data) < Month(DataNacl) Then
+            With cmt.Shape.TextFrame.Characters.Font
+                .Color = vbBlue
+            End With
+        End If
+        With cmt.Shape.TextFrame
+            .AutoSize = True
+            .Characters.Font.Size = 8
+            .Characters.Font.Name = "Arial"
+        End With
+    End With
+End Sub
+
+
+
+

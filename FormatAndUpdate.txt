@@ -1,0 +1,419 @@
+
+Public NameTable As String
+Public NameProduction As String
+
+Sub Open_BookTable()        ' Выбор файла с таблицей из 1с
+    Dim FullPathTable As String
+    Dim k      As Integer
+
+    'по умолчанию к выбору доступны файлы Excel(xls,xlsx,xlsm,xlsb)
+    FullPathTable = Application.GetOpenFilename _
+                    ("Excel files(*.xls*),*.xls*", 1, "Укажите файл таблицы из 1С", , False)
+    If VarType(FullPathTable) = vbBoolean Then
+        'была нажата кнопка отмены - выход из процедуры
+        Exit Sub
+    End If
+
+    If IsBookOpen(FullPathTable) Then 'проверяем открыта ли книга
+        Workbooks(FullPathTable).Activate 'если да то ативируем её
+    Else
+        Workbooks.Open FullPathTable 'если нет то открываем
+    End If
+    ' макрос работает только в Excel 2007 (и более новых версиях)
+    If Val(Application.Version) < 12 Then Exit Sub
+
+    ' получаем полный путь к текущему файлу Excel
+    oldName$ = FullPathTable
+
+    ' выход, если файл уже в нужном формате (XLSX)
+    If UCase$(oldName$) Like "*.XLSX" Then Exit Sub
+
+    ' формируем новое имя файла (меняем расширение)
+    newName$ = Left(oldName$, InStrRev(oldName$, ".")) & "xlsx"
+
+    ' сохраняем файл под новым именем в формате XLSX
+    ActiveWorkbook.SaveAs newName$, xlOpenXMLWorkbook
+
+    ' удаляем прежний файл (в старом формате)
+    If Err = 0 Then
+        Kill oldName$ 'удаляем старый файл с расширением xls
+    End If
+    k = InStrRev(newName$, "\")        'позиция последнего \
+    NameTable = Mid(newName$, k + 1)        'оставлем только то что после последнего \
+
+    ActiveWorkbook.Close 'закрываем старый файл и откр. новый ,чтобы изменение формата зафунциклировало
+    Workbooks.Open FileName:=newName$
+
+    FormatTable
+End Sub
+
+Private Sub Open_BookProduction()        ' Выбор файла с Производством для обновления формовки
+    Dim FullPathProduction As String
+    Dim s      As Integer
+
+    'по умолчанию к выбору доступны файлы Excel(xls,xlsx,xlsm,xlsb)
+    FullPathProduction = Application.GetOpenFilename _
+                         ("Excel files(*.xls*),*.xls*", 1, "Укажите файл таблицы Производства", , False)
+    If VarType(FullPathProduction) = vbBoolean Then
+        'была нажата кнопка отмены - выход из процедуры
+        Exit Sub
+    End If
+
+    s = InStrRev(FullPathProduction, "\")        'позиция последнего \
+    NameProduction = Mid(FullPathProduction, s + 1)        'оставлем только то что после последнего \
+
+    If IsBookOpen(NameProduction) Then
+        Workbooks(NameProduction).Activate
+    Else
+        Workbooks.Open FullPathProduction
+    End If
+
+    'Отключаем обновление экрана
+    Application.ScreenUpdating = False
+    'Отключаем автопересчет формул
+    Application.Calculation = xlCalculationManual
+    'Отключаем отслеживание событий
+    Application.EnableEvents = False
+    'Отключаем разбиение на печатные страницы
+    ActiveWorkbook.ActiveSheet.DisplayPageBreaks = False
+
+    UpdatePart1 ' переходим поочерёдно по всем процедурам
+    UpdatePart2
+    UpdatePart3
+    UpdatePart4
+
+    'Возвращаем обновление экрана
+    Application.ScreenUpdating = True
+    'Возвращаем автопересчет формул
+    Application.Calculation = xlCalculationAutomatic
+    'Включаем отслеживание событий
+    Application.EnableEvents = True
+    
+    MsgBox "Выбранный файл производства обновлён.", vbInformation, "Обновление завершено"
+End Sub
+Private Function IsBookOpen(wbName As String) As Boolean 'функция проверки "открыта ли книга"
+    Dim wbBook As Workbook
+    For Each wbBook In Workbooks
+        If wbBook.Name <> ThisWorkbook.Name Then
+            If Windows(wbBook.Name).Visible Then
+                If wbBook.Name = wbName Then IsBookOpen = True: Exit For
+            End If
+        End If
+    Next wbBook
+End Function
+
+
+Private Sub FormatTable()        ' Форматирование начального файла "Таблица"
+
+    Dim bc     As Workbook
+    Set bc = Workbooks(NameTable)
+
+    'Отключаем обновление экрана
+    Application.ScreenUpdating = False
+    'Отключаем автопересчет формул
+    Application.Calculation = xlCalculationManual
+    'Отключаем отслеживание событий
+    Application.EnableEvents = False
+    'Отключаем разбиение на печатные страницы
+    ActiveWorkbook.ActiveSheet.DisplayPageBreaks = False
+
+    With bc.Worksheets("Sheet1")
+        Rows("1:5").Select
+        Selection.Delete Shift:=xlUp
+        Rows("2:2").Select
+        Selection.Delete Shift:=xlUp
+        ActiveWindow.SmallScroll Down:=-3
+        Columns("A:A").Select
+        Selection.Delete Shift:=xlToLeft
+        Columns("B:D").Select
+        Selection.Delete Shift:=xlToLeft
+
+        For i = Cells(Rows.Count, 1).End(xlUp).Row To 1 Step -1
+            If Cells(i, 1).Value = "" Then
+                Rows(i).Delete Shift:=xlUp
+            End If
+        Next
+
+        Cells.Replace What:="х", Replacement:="", Lookat:=xlPart, SearchOrder:= _
+                      xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+        Cells.Select
+        Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+        Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+        With Selection.Borders(xlEdgeLeft)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlEdgeTop)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlEdgeBottom)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlEdgeRight)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlInsideVertical)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlInsideHorizontal)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        Selection.FormatConditions.Add Type:=xlExpression, Formula1:= _
+                                       "=ДЛСТР(СЖПРОБЕЛЫ(RC))=0"
+        Selection.FormatConditions(Selection.FormatConditions.Count).SetFirstPriority
+        With Selection.FormatConditions(1).Interior
+            .PatternColorIndex = xlAutomatic
+            .ThemeColor = xlThemeColorDark1
+            .TintAndShade = 0
+        End With
+        Selection.FormatConditions(1).StopIfTrue = True
+        With Selection.Interior
+            .PatternColorIndex = xlAutomatic
+            .ThemeColor = xlThemeColorAccent5
+            .TintAndShade = 0.599993896298105
+            .PatternTintAndShade = 0
+        End With
+        Selection.RowHeight = 25
+        Selection.ColumnWidth = 4
+        Rows("1:1").Select
+        Selection.RowHeight = 50
+        With Selection.Interior
+            .Pattern = xlSolid
+            .PatternColorIndex = xlAutomatic
+            .ThemeColor = xlThemeColorDark1
+            .TintAndShade = 0
+            .PatternTintAndShade = 0
+        End With
+        Columns("A:A").Select
+        Selection.Columns.AutoFit
+        With Selection.Interior
+            .Pattern = xlSolid
+            .PatternColorIndex = xlAutomatic
+            .ThemeColor = xlThemeColorDark1
+            .TintAndShade = 0
+            .PatternTintAndShade = 0
+        End With
+        Range("B1:AF1").Select
+        Selection.NumberFormat = "m/d/yyyy"
+        Range("B1").Select
+        ActiveCell.FormulaR1C1 = "9/1/2019"
+        Range("B1").Select
+        Selection.AutoFill Destination:=Range("B1:AE1"), Type:=xlFillDefault
+        Range("B1:AE1").Select
+        Selection.Style = "Normal"
+        Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+        Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+        With Selection.Borders(xlEdgeLeft)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlEdgeTop)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlEdgeBottom)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlEdgeRight)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlInsideVertical)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection.Borders(xlInsideHorizontal)
+            .LineStyle = xlContinuous
+            .ColorIndex = 0
+            .TintAndShade = 0
+            .Weight = xlThin
+        End With
+        With Selection
+            .HorizontalAlignment = xlLeft
+            .VerticalAlignment = xlBottom
+            .WrapText = False
+            .Orientation = 90
+            .AddIndent = False
+            .IndentLevel = 0
+            .ShrinkToFit = False
+            .ReadingOrder = xlContext
+            .MergeCells = False
+        End With
+        Selection.NumberFormat = "m/d/yyyy"
+
+        Cells.Replace What:="ИТОГО", Replacement:="", Lookat:=xlPart, _
+                      SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+                      ReplaceFormat:=False
+        Cells.Replace What:="ВСЕГО", Replacement:="", Lookat:=xlPart, _
+                      SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+                      ReplaceFormat:=False
+        Range("A2").Select
+        ActiveWindow.FreezePanes = True
+    End With
+
+
+    'Возвращаем обновление экрана
+    Application.ScreenUpdating = True
+    'Возвращаем автопересчет формул
+    Application.Calculation = xlCalculationAutomatic
+    'Включаем отслеживание событий
+    Application.EnableEvents = True
+    
+    ContRefrefh = MsgBox("Приступить к обновлению данных Производства?", vbQuestion + vbYesNo, _
+                         "Форматирование таблицы завершено")
+    If ContRefrefh = vbYes Then
+        Open_BookProduction
+    Else
+        MsgBox "Форматирование таблицы завершено", vbInformation
+        Exit Sub
+    End If
+End Sub
+
+
+Private Sub UpdatePart1()        ' перенос столбца А из Таблица в Производство и удаление шапки
+
+    Dim bc     As Workbook
+    Dim bp     As Workbook
+    Dim lRow   As Range
+    Dim lColumn As Range
+    Set bc = Workbooks(NameTable)        'книга с новыми данными
+    Set bp = Workbooks(NameProduction)        'книга со старыми данными
+
+    With Workbooks(NameTable).Worksheets("Sheet1")
+        Set lRow = .Cells(Rows.Count, 1).End(xlUp) 'последняя строка столбца А в "Таблица"
+    End With
+
+    bp.Worksheets("Sheet1").Columns(1).Insert 'вставляем пустой столбец в "Производство" со сдвигом
+    'копируем столбц А из Таблица в Производство
+    bc.Worksheets("Sheet1").Range("A1", lRow).Copy bp.Worksheets("Sheet1").Range("A1")
+
+    ' Вставляем скопир. в (А) выравниваем ширину(А),удаляем шапку и делаем ее высоту 25
+    With bp.Worksheets("Sheet1")
+        Set lColumn = .Cells(1, .Columns.Count).End(xlToLeft) 'определяем послед столбец в "Производство"
+        .Range("A:A").Columns.AutoFit 'автовыровнивание столбца А
+        .Range("A1", lColumn).Delete Shift:=xlUp 'удаление шапки
+        .Rows("1:1").RowHeight = 25 'высота строки 1 = 25
+    End With
+
+
+End Sub
+
+Private Sub UpdatePart2()        'Процедура сравнения старого и нового списка названий изделий
+    Dim a(), b(), c(), t&, x As Byte, iLastrow As Long, i As Long
+    Dim bp     As Workbook
+    Set bp = Workbooks(NameProduction)
+    With bp.Worksheets("Sheet1")
+        iLastrow = .Cells(Rows.Count, 1).End(xlUp).Row
+        a = Range(.[a1], .Range("A" & iLastrow)).Value
+        iLastrow = .Cells(Rows.Count, 2).End(xlUp).Row
+        b = Range(.[AH1], .Range("B" & iLastrow)).Value
+
+        ReDim c(1 To UBound(a), 1 To 32)
+
+        With CreateObject("Scripting.Dictionary")
+
+            For i = 1 To UBound(a)
+                .Item(a(i, 1)) = i
+            Next
+
+            For i = 1 To UBound(b)
+                If .exists(b(i, 1)) Then
+                    t = .Item(b(i, 1))
+                    For x = 1 To 32: c(t, x) = b(i, x): Next
+                End If
+            Next
+        End With
+
+        .[B1].Resize(UBound(c), 32) = c
+        .Activate
+    End With
+
+End Sub
+
+
+Private Sub UpdatePart3()        'Завершает начатое процедурой Compare()
+    Dim bp     As Workbook
+    Dim colvA  As Integer
+    Dim colvB  As Integer
+    Dim i      As Integer
+    Set bp = Workbooks(NameProduction)
+
+    With bp.Worksheets("Sheet1")
+        colvA = Cells(Rows.Count, 1).End(xlUp).Row        'определяем размеры столбцов 1 и 2 по длинне
+        colvB = Cells(Rows.Count, 2).End(xlUp).Row        '
+        
+        If colvA < colvB Then        'если A меньше B
+            .Range(Cells(colvA + 1, 2), Cells(colvB, 32)).Delete 'удаляем всё что ниже посл строки столбца А
+            .Range("B:B").Delete Shift:=xlLeft 'удаляем столбец В
+        Else
+            'если А>=B
+            .Range("B:B").Delete Shift:=xlLeft  'удаляем столбец В
+        End If
+    End With
+End Sub
+
+Private Sub UpdatePart4()        'процедура добавления формовки
+
+    Dim i As Integer, j As Integer
+    Dim lRow As Integer, lColumn As Integer, lColumn1 As Integer
+    Dim shTable As Worksheet: Set shTable = Workbooks(NameTable).Worksheets("Sheet1")
+    Dim shProduction As Worksheet: Set shProduction = Workbooks(NameProduction).Worksheets("Sheet1")
+    Dim ColLtr As String, Copyrange As String
+    Set wb = Workbooks(NameTable)        'книга с новыми данными
+    Set wb1 = Workbooks(NameProduction)        'книга со старыми данными
+
+    lRow = shTable.Range("A" & Rows.Count).End(xlUp).Row        'граница сверки по строкам
+    lColumn1 = shTable.Cells(1, Columns.Count).End(xlToLeft).Column        'номер послед. столбца
+    ColLtr = Replace(Cells(1, lColumn1).Address(True, False), "$1", "")        'переводим № в букву столбца
+    Copyrange = "A1" & ":" & ColLtr & "1"        'задаём область для копирования шапки из "Таблица"
+    
+    shTable.Range(Copyrange).Copy        ' копируем шапку
+    shProduction.Range("A1").Insert Shift:=xlDown        'вставляем её в "Проиводство" со сдвигом вниз
+    shProduction.Rows("1:1").RowHeight = 50        'высоту строки делаем 50
+
+    lColumn = shProduction.Cells(1, Columns.Count).End(xlToLeft).Column        'граница сверки по столбцам
+    
+    'далее сравниваем две книги, перебирая все ячейки получившегося диапазона по условию
+    For i = 2 To lRow
+        For j = 2 To lColumn
+            If shProduction.Cells(i, j) <> shTable.Cells(i, j) _
+               And shProduction.Cells(i, j) = "" Then
+                'и вставляем новые данные при выполнении условия
+                shProduction.Cells(i, j).Value = shTable.Cells(i, j).Value
+            End If
+        Next
+    Next
+    shProduction.Activate
+    Range("A2").Select
+    ActiveWindow.FreezePanes = True 'закрепляем шапку
+End Sub
+
+

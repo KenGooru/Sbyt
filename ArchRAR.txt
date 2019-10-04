@@ -1,0 +1,22 @@
+
+Const sWinRarAppPath As String = "C:\Program Files\WinRAR\WinRAR.exe"
+Public Sub ArchRAR()
+    'Архивируем папку "C:\Temp\Тест"
+    If FolderToRAR("H:\Sbyt") Then
+        MsgBox "Папка успешно заархивирована!", vbInformation, "www.excel-vba.ru"        '
+    End If
+
+End Sub
+
+Private Function FolderToRAR(sPath As String)
+    Dim sArhiveName As String
+    Dim sWinRarApp As String
+    Dim sArhiveDate As Date
+    sWinRarApp = sWinRarAppPath & " A -ep2 -r "        '
+    sArhiveDate = Format(Now, " dd-mm-yy")
+    sArhiveName = sPath & sArhiveDate & ".rar"        '
+    'добавляем двойные кавычки, что позволит нам работать с именем файла и путём, которые содержат пробелы.
+    'без кавычек пробелы недопустимы
+    FolderToRAR = Shell(sWinRarApp & " """ & sArhiveName & """ """ & sPath & """ ", vbHide)
+End Function
+

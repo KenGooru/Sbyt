@@ -1,0 +1,30 @@
+
+Sub Color_Yellow()
+    '
+    ' Color_Yellow Макрос
+    '
+    ' Сочетание клавиш: Ctrl+ч
+    '
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .Color = 65535
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+End Sub
+Sub Color_Blue()
+'
+' Color_Blue Макрос
+'
+' Сочетание клавиш: Ctrl+ы
+'
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorAccent5
+        .TintAndShade = -0.499984740745262
+        .PatternTintAndShade = 0
+    End With
+End Sub
+

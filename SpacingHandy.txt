@@ -1,0 +1,150 @@
+
+Dim NameH      As String
+Dim col_voH    As String
+Dim DataH      As Date
+Dim numbH      As String
+Dim BookSpacing As String
+Dim MesPropH As String, NumCehH As String
+Dim DataNaclH  As Date
+Dim NameNaclH  As String
+
+Public Sub FindSelectHand()        'управляющая процедура разноса сдачи изделий
+    'собираем нужные данные об изделии
+    NameNaclH = ActiveWorkbook.Name        'имя файла накладной
+    NameH = ActiveCell.Value        'название изделия
+    col_voH = ActiveCell.Offset(0, 1)        'количество сданных изделий
+    DataH = ActiveCell.Offset(0, 2)        'дата формовки изделия
+    numbH = ActiveCell.Offset(0, 3)        'номер изделия
+    NumCehH = Mid(Cells(6, 1).Value, 13, 2)        'номер цеха
+    DataNaclH = Mid(Cells(5, 1).Value, 18, 10)        'дата накладной
+    MesPropH = Format(DataH, "mmmm")        'месяц (для поиска файла)
+    BookSpacing = "Производство" & NumCehH & MesPropH & ".xlsx"        'имя "Производства" для обращения
+    
+    With Workbooks(BookSpacing).Worksheets("Sheet1").Cells
+        
+        Set xRow = .Find(What:=NameH, LookIn:=xlFormulas, Lookat:=xlWhole, SearchOrder:=xlByRows)
+        xR = xRow.Address
+        
+        Set yColumn = .Find(What:=DataH, LookIn:=xlFormulas, Lookat:=xlWhole, SearchOrder:=xlByColumns)
+        yC = yColumn.Address
+        
+        Workbooks(BookSpacing).Activate
+        Union(Range(xR).EntireRow, Range(yC).EntireColumn).Select
+    End With
+    ContSpacing = MsgBox("Приступить к корректировке диапазона?", vbQuestion + vbYesNo, _
+                         "Диапазон найден")
+    If ContSpacing = vbYes Then
+        GetUserRange
+    Else
+        MsgBox "Корректировка диапазона отменена", vbInformation
+    End If
+    
+End Sub
+
+Private Sub GetUserRange()
+    Dim UserRange As Range
+    Prompt = "Выберите диапазон для разноса"
+    Title = "Выбор диапазона"
+    '   Отображение поля ввода
+    On Error Resume Next
+    Set UserRange = Application.InputBox( _
+                    Prompt:=Prompt, _
+                    Title:=Title, _
+                    Type:=8)        'Выделение диапазона
+    On Error GoTo 0
+    '   Отменено ли отображение поля ввода?
+    If UserRange Is Nothing Then
+        MsgBox "Отменено."
+    Else
+        oldValue = UserRange.Value
+        CellSpecing = UserRange.Address
+    End If
+    
+    newValue = Dobav_lenie(col_voH, oldValue)        'получаем новое значение ячейки
+    'проверяем получ. значение в ячейке (формовка должна быть >= сдаче)
+    If newValue = False Then        'если проверка не пройдена оставить запись в накладной
+
+    End If
+    Range(CellSpecing).Value = newValue        'заносим новое значение в ячейку
+
+    Call Calor(newValue, CellSpecing)        'закрашиваем ячейку жёлтым цветом если форм=сдаче
+    Call Prim(CellSpecing, DataNaclH)        'добавляем в ячейку примечание(данные разнесённого изделия)
+
+End Sub
+
+Private Function Dobav_lenie(ByVal col_voH As String, ByVal oldValue As String)        'функция рассчёта значения ячейки после разноса позиции из накладной
+    Dim poz1 As Integer, poz2 As Integer, pozCh1 As Integer, _
+        pozCh2 As Integer, col_voCh As Integer
+    Dim poz3 As String, poz4 As String
+    col_voCh = CInt(col_voH)        'кол-во сдаваемых изделий конверт. в число
+
+    If oldValue Like "*(*)" Then        'есть ли в значении ячейки скобки
+
+        poz1 = InStr(1, oldValue, "(")        'Определяем позицию первой скобки
+        poz2 = InStr(poz1 + 1, oldValue, ")")        'Определяем позицию второй скобки
+        poz3 = Left(oldValue, poz1 - 1)        'Извлекаем в poz3 всё что до скобки
+        poz4 = Mid(oldValue, poz1 + 1, poz2 - poz1 - 1)        'Извлекаем в poz4 всё что в скобках
+        pozCh1 = CInt(poz3)        'всё что до скобки конверт. в число
+        pozCh2 = CInt(poz4)        'всё что в скобках конверт. в число
+
+        If pozCh1 < pozCh2 + col_voCh Then
+            Dobav_lenie = False
+        Else
+            Dobav_lenie = pozCh1 & "(" & pozCh2 + col_voCh & ")"
+        End If
+    Else
+        oldValueCh = CInt(oldValue)
+        If oldValueCh < col_voCh Then
+            Dobav_lenie = False
+        Else
+            Dobav_lenie = oldValue & "(" & col_voH & ")"
+        End If
+    End If
+
+End Function
+
+Private Sub Calor(ByVal newValue As String, ByVal CellSpecing As String)        'процедура выделения цветом ячейки по условию сдача = формовка
+    Dim n1 As Integer, n2 As Integer
+    Dim n3 As String, n4 As String
+    n1 = InStr(1, newValue, "(")        'Определяем позицию первой скобки
+    n2 = InStr(n1 + 1, newValue, ")")        'Определяем позицию второй скобки
+    n3 = Left(newValue, n1 - 1)        'Извлекаем в n3 всё что до скобки
+    n4 = Mid(newValue, n1 + 1, n2 - n1 - 1)        'Извлекаем в n4 всё что в скобках
+    If n3 = n4 Then        ' если всё что до скобки = всё что в скобках
+        With Workbooks(BookSpacing).Worksheets("Sheet1")
+            .Range(CellSpecing).Interior.Color = 65535        'выделяем цветом ячейку при соответствии условию
+        End With
+    End If
+
+End Sub
+
+Private Sub Prim(ByVal CellSpecing As String, ByVal DataNaclH As Date)        'процедура добавления примечания о  сданном изделии
+    Dim cmt    As Variant
+    Dim MyCommentText As String
+    
+    With Workbooks(BookSpacing).Worksheets("Sheet1")
+        MyCommentText = NameNaclH & Chr(32) & "от" & Chr(32) & DataNaclH & Chr(32) & _
+                        NameH & Chr(32) & col_voH & "шт." & Chr(32) & DataH & Chr(32) & "№" & numbH
+        Set cmt = .Range(CellSpecing).Comment
+        If cmt Is Nothing Then
+            Set cmt = .Range(CellSpecing).AddComment
+            cmt.Text Text:=MyCommentText
+        Else
+            With .Range(CellSpecing).Comment
+                .Text Text:=.Text & Chr(10) & MyCommentText
+            End With
+        End If
+        If Month(DataH) < Month(DataNaclH) Then
+            With cmt.Shape.TextFrame.Characters.Font
+                .Color = vbBlue
+            End With
+        End If
+        
+        With cmt.Shape.TextFrame
+            .AutoSize = True
+            .Characters.Font.Size = 8
+            .Characters.Font.Name = "Arial"
+        End With
+    End With
+End Sub
+

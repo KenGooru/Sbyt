@@ -1,0 +1,11 @@
+
+Sub Сравнение()
+    '
+    ' Сравнение Макрос
+    '
+    ' Сочетание клавиш: Ctrl+ц
+    '
+    Range("B:B,AH:AH").Select
+    Range("AH1").Activate
+    Selection.RowDifferences(ActiveCell).Select
+End Sub
