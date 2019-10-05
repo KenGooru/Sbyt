@@ -40,12 +40,14 @@ Public Sub OpenNacl()
     MsgBox "Выбранные файлы накладных успешно обработаны", 64, "Обработка завершена"
 End Sub
 
-Private Sub Open_Production(ByVal MesProp As String, ByVal NumCeh As String, ByVal Cell As Range)
-    Const baseFolder = "H:\1\ПробаМесяц\"
+Private Sub Open_Production(ByVal MesProp As String, ByVal NumCeh As String, _
+    ByVal YearPlan As String, ByVal Cell As Range)
+    
+    Const baseFolder = "H:\Sbyt\Production\"
     Dim pShell As New Shell32.Shell
     Dim FullPathPlan As String
     Dim i As Integer
-    FullPathPlan = FindFile(baseFolder, "Производство" & NumCeh & MesProp & ".xlsx", pShell)
+    FullPathPlan = FindFile(baseFolder, "Production" & NumCeh & MesProp & YearPlan & ".xlsx", pShell)
     If FullPathPlan <> "" Then
         
         i = InStrRev(FullPathPlan, "\")        'позиция последнего \
@@ -94,7 +96,8 @@ Private Sub Find_Select()    'управляющая процедура разноса сдачи изделий
         col_vo = Cell.Offset(0, 1)  'количество сданных изделий
         Data = Cell.Offset(0, 2)    'дата формовки изделия
         numb = Cell.Offset(0, 3)    'номер изделия
-        MesProp = Format(Data, "mmmm")
+        MesProp = Application.Text(Data, "MMMM")
+        YearPlan = Format(Data, "yyyy")
         
         Call Open_Production(MesProp, NumCeh, Cell)
         'd = Find_ProductionValid
