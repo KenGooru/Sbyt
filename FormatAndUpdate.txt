@@ -1,4 +1,3 @@
-
 Public NameTable As String
 Public NameProduction As String
 
@@ -133,9 +132,11 @@ Private Sub FormatTable()        ' Форматирование начального файла "Таблица"
                 Rows(i).Delete Shift:=xlUp
             End If
         Next
-
+        
         Cells.Replace What:="х", Replacement:="", Lookat:=xlPart, SearchOrder:= _
-                      xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+                                xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+        
+                
         Cells.Select
         Selection.Borders(xlDiagonalDown).LineStyle = xlNone
         Selection.Borders(xlDiagonalUp).LineStyle = xlNone
@@ -268,7 +269,7 @@ Private Sub FormatTable()        ' Форматирование начального файла "Таблица"
             .MergeCells = False
         End With
         Selection.NumberFormat = "m/d/yyyy"
-
+        
         Cells.Replace What:="ИТОГО", Replacement:="", Lookat:=xlPart, _
                       SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
                       ReplaceFormat:=False
@@ -415,5 +416,3 @@ Private Sub UpdatePart4()        'процедура добавления формовки
     Range("A2").Select
     ActiveWindow.FreezePanes = True 'закрепляем шапку
 End Sub
-
-
