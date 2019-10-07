@@ -1,4 +1,3 @@
-
 Public NameNacl As String
 Public Name As String
 Public col_vo As String
@@ -9,9 +8,11 @@ Public NamePlan As String
 
 Public Sub OpenNacl()
     Dim FullPathNacl, xFile As Variant
-    Dim k As Integer
-    
-    
+    Dim k      As Integer
+    Dim Rng As Range, rCell As Range
+    Dim colvored As Integer, vsegored As Integer
+    Dim sExp As String, sMainName As String
+    '    Dim shNacl As Worksheet: Set shNacl = Workbooks(NameNacl).Worksheets("Sheet1")
     'по умолчанию к выбору доступны файлы Excel(xls,xlsx,xlsm,xlsb)
     FullPathNacl = Application.GetOpenFilename _
                    ("Excel files(*.xls*),*.xls*", 1, "”кажите файл(ы) с накладными", , True)
@@ -20,30 +21,67 @@ Public Sub OpenNacl()
         Exit Sub
     End If
     
-    With Application
-        .EnableEvents = False
-        '   .Calculation = xlCalculationManual
-        '   .ScreenUpdating = False
-        '   .Visible = False
+        With Application
+            .EnableEvents = False
+            .Calculation = xlCalculationManual
+            .ScreenUpdating = False
+            '   .Visible = False
+            
+    For Each xFile In FullPathNacl
+        k = InStrRev(xFile, "\")        'позици€ последнего \
+        NameNacl = Mid(xFile, k + 1)        'оставлем только то что после последнего \
+        Workbooks.Open xFile        'открываем выбрынный бук
+        Call Find_Select
         
-        For Each xFile In FullPathNacl
-            k = InStrRev(xFile, "\")    'позици€ последнего \
-            NameNacl = Mid(xFile, k + 1) 'оставлем только то что после последнего \
-            Workbooks.Open xFile 'открываем выбрынный бук
-            Call Find_Select
+        Workbooks(NameNacl).Activate
+        
+        Set Rng = Range(Range("B9"), Range("B9").End(xlDown).Offset(-1, 0))
+        colvored = 0
+        For Each rCell In Rng
+            If rCell.Interior.Color = vbRed Then
+                colvored = colvored + 1
+            End If
         Next
+        vsegored = colvored
+        If vsegored > 0 Then
+            oldName$ = xFile
+            sExp = Right(oldName$, Len(oldName$) - InStrRev(oldName$, ".") + 1)
+            sMainName = Left(oldName$, Len(oldName$) - Len(sExp))
+            newName$ = sMainName & "fixing" & ".xlsx"
+            
+            ActiveWorkbook.SaveAs newName$, xlOpenXMLWorkbook
+            
+            If Err = 0 Then
+                Kill oldName$
+            End If
+            ActiveWorkbook.Close
+        Else
+            oldName$ = xFile
+            sExp = Right(oldName$, Len(oldName$) - InStrRev(oldName$, ".") + 1)
+            sMainName = Left(oldName$, Len(oldName$) - Len(sExp))
+            newName$ = sMainName & "spaced" & ".xlsx"
+            
+            ActiveWorkbook.SaveAs newName$, xlOpenXMLWorkbook
+            
+            If Err = 0 Then
+                Kill oldName$
+            End If
+            ActiveWorkbook.Close
+            
+        End If
+    Next
         .EnableEvents = True
-        '   .Calculation = xlCalculationAutomatic
-        '   .ScreenUpdating = True
-        '   .Visible = True
-    End With
+        .Calculation = xlCalculationAutomatic
+        .ScreenUpdating = True
+          ' .Visible = True
+        End With
     MsgBox "¬ыбранные файлы накладных успешно обработаны", 64, "ќбработка завершена"
 End Sub
 
 Private Sub Open_Production(ByVal MesProp As String, ByVal NumCeh As String, _
     ByVal YearPlan As String, ByVal Cell As Range)
     
-    Const baseFolder = "H:\Sbyt\Production\"
+    Const baseFolder = "D:\Sbyt\2019\Production\"
     Dim pShell As New Shell32.Shell
     Dim FullPathPlan As String
     Dim i As Integer
@@ -70,7 +108,7 @@ Private Sub Open_Production(ByVal MesProp As String, ByVal NumCeh As String, _
 End Sub
 
 Private Sub Find_Select()    'управл€юща€ процедура разноса сдачи изделий
-    Const baseFolder = "H:\1\ѕробаћес€ц\"
+    Const baseFolder = "D:\Sbyt\2019\Production\"
     Dim pShell As New Shell32.Shell
     Dim rRange As Range
     Dim Cell As Range
@@ -79,17 +117,17 @@ Private Sub Find_Select()    'управл€юща€ процедура разноса сдачи изделий
     Dim n As Integer
     Dim MesProp As String, NumCeh As String
     Dim DataNacl As Date
-    
+
     Set rRange = Workbooks(NameNacl).Worksheets("Sheet1"). _
     Range(Range("B9"), Range("B9").End(xlDown).Offset(-1, 0))
-    
+
     With Workbooks(NameNacl).Worksheets("Sheet1")
         NumCeh = Mid(Cells(6, 1).Value, 13, 2)
         DataNacl = Mid(Cells(5, 1).Value, 18, 10)
     End With
-    
+
     For Each Cell In rRange
-        
+
         If Cell.Interior.Color = 65535 Or Cell.Interior.Color = vbRed Then GoTo q: 'если €чейка с название уже цветна€ - гоу в конец цикла
         'собираем нужные данные об изделии
         Name = Cell.Value              'название издели€
@@ -99,7 +137,8 @@ Private Sub Find_Select()    'управл€юща€ процедура разноса сдачи изделий
         MesProp = Application.Text(Data, "MMMM")
         YearPlan = Format(Data, "yyyy")
         
-        Call Open_Production(MesProp, NumCeh, Cell)
+        
+        Call Open_Production(MesProp, NumCeh, YearPlan, Cell)
         'd = Find_ProductionValid
         If Find_ProductionValid = False Then GoTo q:
         CellFind = DataName_Find(Name, Data, NamePlan, NameNacl, Cell) 'находим адрес €чейки дл€ разноса
@@ -166,7 +205,7 @@ Private Function Valid_CellFind(ByVal CellFind As Variant, ByVal Cell As Range) 
     
     CellFindValue = Workbooks(NamePlan).Worksheets("Sheet1").Range(CellFind)
     Select Case CellFindValue
-        Case Is = ""
+        Case Is = "", 0, " "
             With Workbooks(NameNacl).Worksheets("Sheet1")
                 .Range(Cell, Cell.Offset(0, 2)).Interior.Color = vbRed
                 Cell.Offset(0, 4).Value = "»зделие" & Chr(32) & Name & Chr(32) & _
@@ -238,7 +277,7 @@ End Function
 
 Private Function Dobav_lenie(ByVal col_vo As String, ByVal oldValue As String)   'функци€ рассчЄта значени€ €чейки после разноса позиции из накладной
     Dim poz1 As Integer, poz2 As Integer, pozCh1 As Integer, _
-    pozCh2 As Integer, col_voCh As Integer
+    pozCh2 As Integer, col_voCh As Integer, oldValueCh As Integer
     Dim poz3 As String, poz4 As String
     col_voCh = CInt(col_vo)    'кол-во сдаваемых изделий конверт. в число
     
@@ -309,7 +348,3 @@ Private Sub Prim(ByVal CellFind As String, ByVal DataNacl As Date)        'проце
         End With
     End With
 End Sub
-
-
-
-
