@@ -104,9 +104,6 @@ End Function
 
 Private Sub FormatTable()        ' Форматирование начального файла "Таблица"
 
-    Dim bc     As Workbook
-    Set bc = Workbooks(NameTable)
-
     'Отключаем обновление экрана
     Application.ScreenUpdating = False
     'Отключаем автопересчет формул
@@ -116,170 +113,63 @@ Private Sub FormatTable()        ' Форматирование начального файла "Таблица"
     'Отключаем разбиение на печатные страницы
     ActiveWorkbook.ActiveSheet.DisplayPageBreaks = False
 
-    With bc.Worksheets("Sheet1")
-        Rows("1:5").Select
-        Selection.Delete Shift:=xlUp
-        Rows("2:2").Select
-        Selection.Delete Shift:=xlUp
-        ActiveWindow.SmallScroll Down:=-3
-        Columns("A:A").Select
-        Selection.Delete Shift:=xlToLeft
-        Columns("B:D").Select
-        Selection.Delete Shift:=xlToLeft
+    Rows("1:5").Delete Shift:=xlUp
+    Rows("2:2").Delete Shift:=xlUp
+    Columns("A:A").Delete Shift:=xlToLeft
+    Columns("B:D").Delete Shift:=xlToLeft
 
-        For i = Cells(Rows.Count, 1).End(xlUp).Row To 1 Step -1
-            If Cells(i, 1).Value = "" Then
-                Rows(i).Delete Shift:=xlUp
-            End If
-        Next
-        
-        Cells.Replace What:="х", Replacement:="", Lookat:=xlPart, SearchOrder:= _
-                                xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
-        
-                
-        Cells.Select
-        Selection.Borders(xlDiagonalDown).LineStyle = xlNone
-        Selection.Borders(xlDiagonalUp).LineStyle = xlNone
-        With Selection.Borders(xlEdgeLeft)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlEdgeTop)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlEdgeBottom)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlEdgeRight)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlInsideVertical)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlInsideHorizontal)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        Selection.FormatConditions.Add Type:=xlExpression, Formula1:= _
-                                       "=ДЛСТР(СЖПРОБЕЛЫ(RC))=0"
-        Selection.FormatConditions(Selection.FormatConditions.Count).SetFirstPriority
-        With Selection.FormatConditions(1).Interior
-            .PatternColorIndex = xlAutomatic
-            .ThemeColor = xlThemeColorDark1
-            .TintAndShade = 0
-        End With
-        Selection.FormatConditions(1).StopIfTrue = True
-        With Selection.Interior
-            .PatternColorIndex = xlAutomatic
-            .ThemeColor = xlThemeColorAccent5
-            .TintAndShade = 0.599993896298105
-            .PatternTintAndShade = 0
-        End With
-        Selection.RowHeight = 25
-        Selection.ColumnWidth = 4
-        Rows("1:1").Select
-        Selection.RowHeight = 50
-        With Selection.Interior
-            .Pattern = xlSolid
-            .PatternColorIndex = xlAutomatic
-            .ThemeColor = xlThemeColorDark1
-            .TintAndShade = 0
-            .PatternTintAndShade = 0
-        End With
-        Columns("A:A").Select
-        Selection.Columns.AutoFit
-        With Selection.Interior
-            .Pattern = xlSolid
-            .PatternColorIndex = xlAutomatic
-            .ThemeColor = xlThemeColorDark1
-            .TintAndShade = 0
-            .PatternTintAndShade = 0
-        End With
-        Range("B1:AF1").Select
-        Selection.NumberFormat = "m/d/yyyy"
-        Range("B1").Select
-        ActiveCell.FormulaR1C1 = "9/1/2019"
-        Range("B1").Select
-        Selection.AutoFill Destination:=Range("B1:AE1"), Type:=xlFillDefault
-        Range("B1:AE1").Select
-        Selection.Style = "Normal"
-        Selection.Borders(xlDiagonalDown).LineStyle = xlNone
-        Selection.Borders(xlDiagonalUp).LineStyle = xlNone
-        With Selection.Borders(xlEdgeLeft)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlEdgeTop)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlEdgeBottom)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlEdgeRight)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlInsideVertical)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection.Borders(xlInsideHorizontal)
-            .LineStyle = xlContinuous
-            .ColorIndex = 0
-            .TintAndShade = 0
-            .Weight = xlThin
-        End With
-        With Selection
-            .HorizontalAlignment = xlLeft
-            .VerticalAlignment = xlBottom
-            .WrapText = False
-            .Orientation = 90
-            .AddIndent = False
-            .IndentLevel = 0
-            .ShrinkToFit = False
-            .ReadingOrder = xlContext
-            .MergeCells = False
-        End With
-        Selection.NumberFormat = "m/d/yyyy"
-        
-        Cells.Replace What:="ИТОГО", Replacement:="", Lookat:=xlPart, _
-                      SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
-                      ReplaceFormat:=False
-        Cells.Replace What:="ВСЕГО", Replacement:="", Lookat:=xlPart, _
-                      SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
-                      ReplaceFormat:=False
-        Range("A2").Select
-        ActiveWindow.FreezePanes = True
+    For i = Cells(Rows.Count, 1).End(xlUp).Row To 1 Step -1
+        If Cells(i, 1).Value = "" Then
+            Rows(i).Delete Shift:=xlUp
+        End If
+    Next
+
+    iLastDay = Day(DateSerial(Year(Now), Month(Now) + 1, 0))        'последнее число текущего месяца
+    iFirstDay = DateSerial(Year(Now), Month(Now), 1)        'первое число тек. месяца dd.mm.yyyy
+    ColumnLtr = Replace(Cells(1, iLastDay + 1).Address(True, False), "$1", "")        'переводим № в букву столбца
+    DataRange = "B1" & ":" & ColumnLtr & "1"        'задаём область для копирования шапки из "Таблица"
+
+    Range("B1").Select
+    ActiveCell.FormulaR1C1 = iFirstDay
+    Range("B1").AutoFill Destination:=Range(DataRange), Type:=xlFillDefault
+    With Range(DataRange)
+        .NumberFormat = "m/d/yyyy"
+        .Orientation = 90
+        .VerticalAlignment = xlCenter
+        .HorizontalAlignment = xlCenter
+        .Rows.AutoFit
+        .Font.Name = "Times New Roman"
+        .Font.Size = 8
+    End With
+    With Columns("A:A")
+        .Columns.AutoFit
+        .Font.Name = "Times New Roman"
+        .Font.Size = 10
+    End With
+    lRow = Range("A" & Rows.Count).End(xlUp).Row
+    lCol = Cells(1, Columns.Count).End(xlToLeft).Column
+    Range(Cells(lRow - 1, 1), Cells(lRow + 1, lCol)).Delete
+    With Range(Cells(2, 2), Cells(lRow - 2, lCol))
+        .Borders.LineStyle = True
+        .RowHeight = 25
+        .ColumnWidth = 4
+        .Replace What:="х", Replacement:="", Lookat:=xlPart, _
+                 SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+        .Replace What:="x", Replacement:="", Lookat:=xlPart, _
+                 SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+        .Replace What:=" ", Replacement:="", Lookat:=xlPart, _
+                 SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+        .VerticalAlignment = xlCenter
+        .HorizontalAlignment = xlLeft
+        .Font.Name = "Times New Roman"
+        .Font.Size = 10
+        .SpecialCells(xlCellTypeBlanks).Interior.Color = xlNone
+        .SpecialCells(xlCellTypeConstants, 2).Interior.Color = 15261367
+        .NumberFormat = "General"
     End With
 
+    Range("A2").Select
+    ActiveWindow.FreezePanes = True
 
     'Возвращаем обновление экрана
     Application.ScreenUpdating = True
@@ -287,7 +177,7 @@ Private Sub FormatTable()        ' Форматирование начального файла "Таблица"
     Application.Calculation = xlCalculationAutomatic
     'Включаем отслеживание событий
     Application.EnableEvents = True
-    
+
     ContRefrefh = MsgBox("Приступить к обновлению данных Производства?", vbQuestion + vbYesNo, _
                          "Форматирование таблицы завершено")
     If ContRefrefh = vbYes Then
