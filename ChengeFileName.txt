@@ -1,0 +1,24 @@
+'---------------------------------------------------------------------------------------
+' Procedure : ChengeFileName
+' DateTime  : 09.10.2019 08:40
+' Author    : KenGooru
+' Purpose   : Replacing the suffix in the file name
+'---------------------------------------------------------------------------------------
+'
+Sub ChengeFileName() 'процедура изменения имени файла
+
+    Dim NewFilename As String
+    Dim filename As String, findstr As String, chengesuff As String
+    
+    oldName = ActiveWorkbook.FullName 'передаём в переменную полный путь к файлу активной книги
+    findstr = "fixing"  'изменяемая часть имени файла
+    chengesuff = "fixed" 'на что заменить изменяемую часть имени файла
+    NewFilename = Replace(oldName, findstr, chengesuff, 1)  'новое имя файла
+    
+    ActiveWorkbook.SaveAs NewFilename, xlOpenXMLWorkbook  ' сохраняем файл под новым именем в формате XLSX
+    
+    If Err = 0 Then
+        Kill oldName        'удаляем старый файл с расширением xls
+    End If
+    ActiveWorkbook.Close 'закрываем книгу
+End Sub
